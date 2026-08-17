@@ -1,21 +1,17 @@
 # ♠️ ASCII Casino — Texas Hold'em No-Limit
 
-Game poker Texas Hold'em No-Limit yang berjalan **100% di terminal**, satu file Python,
-tanpa dependency eksternal. Kamu melawan hingga 7 bot AI dengan kepribadian & gaya
-bermain yang berbeda-beda, lengkap dengan kartu bergaya ASCII/pixel-art, side-pot
-engine yang benar, dan evaluator tangan 7-kartu.
+A single-file, zero-dependency Texas Hold'em No-Limit poker game that runs **100% in
+your terminal**. Play against up to 7 AI bots, each with a distinct personality and
+playstyle, rendered with hand-drawn pixel-art ASCII cards, a correct multi-way side-pot
+engine, and a proper 7-card hand evaluator.
 
-> A single-file, zero-dependency Texas Hold'em No-Limit poker game that runs entirely
-> in your terminal — play against up to 7 AI bots, each with a distinct personality,
-> rendered with hand-drawn pixel-art ASCII cards.
-
-## Pratinjau / Preview
+## Preview
 
 ```
 ╔════════════════════════════════════════════════════════════════════════╗
 ║  ♠♥  A S C I I   C A S I N O — TEXAS HOLD'EM NO-LIMIT  ♦♣    Hand #1   ║
 ╚════════════════════════════════════════════════════════════════════════╝
-  ◉ Blinds: $100/$200   │  Street: FLOP   │  Pot: $10,500   │  Pemain tersisa: 7
+  ◉ Blinds: $100/$200   │  Street: FLOP   │  Pot: $10,500   │  Players remaining: 7
 
   ♣ Community Cards ♦
 ╔═════════════╗ ╔═════════════╗ ╔═════════════╗
@@ -31,102 +27,104 @@ engine yang benar, dan evaluator tangan 7-kartu.
 ╚═════════════╝ ╚═════════════╝ ╚═════════════╝
 
 ──────────────────────────────────────────────────────────────────────────
-  ★ Kamu                               Lawan-lawan:
-  Satya                                The Bluffer [BTN]    The Rock
-  chips:$50,000  bet:$0                chips:$50.0k         chips:$50.0k
-  ╔═════════════╗ ╔═════════════╗      ┌───┐ ┌───┐          ┌───┐ ┌───┐
-  ║J  ♦         ║ ║A  ♠         ║      │▓▓▓│ │▓▓▓│          │▓▓▓│ │▓▓▓│
-  ║      █      ║ ║      █      ║      └───┘ └───┘          └───┘ └───┘
+  ★ You                                 Opponents:
+  strrykmz                              The Bluffer [BTN]    The Rock
+  chips:$50,000  bet:$0                 chips:$50.0k         chips:$50.0k
+  ╔═════════════╗ ╔═════════════╗       ┌───┐ ┌───┐          ┌───┐ ┌───┐
+  ║J  ♦         ║ ║A  ♠         ║       │▓▓▓│ │▓▓▓│          │▓▓▓│ │▓▓▓│
+  ║      █      ║ ║      █      ║       └───┘ └───┘          └───┘ └───┘
   ...
 ```
 
-*(Di terminal sungguhan tampilannya berwarna — merah untuk ♥/♦, putih/bold untuk ♠/♣.)*
+*(Colors render in an actual terminal — red for ♥/♦, white/bold for ♠/♣.)*
 
-## Fitur
+## Features
 
-- **Aturan poker standar** — Texas Hold'em No-Limit lengkap: blind, preflop/flop/turn/river,
-  all-in, side-pot bertingkat (multi-way all-in dihitung dengan benar), showdown.
-- **7 kepribadian bot AI** yang benar-benar berbeda gaya bermainnya (lihat tabel di
-  bawah), dipilih acak tiap sesi — bukan sekadar bot acak, tiap bot punya profil
-  keketatan (VPIP), agresivitas, kecenderungan bluff, dan fold-to-raise sendiri.
-- **AI adaptif**: preflop pakai Chen Formula, postflop pakai simulasi Monte Carlo
-  (equity estimation) untuk menilai kekuatan tangan relatif terhadap jumlah lawan.
-- **Evaluator tangan 7-kartu** yang benar (mencari kombinasi 5 kartu terbaik dari 7,
-  termasuk kasus straight roda A-2-3-4-5).
-- **Kartu ASCII/pixel-art** — tiap kartu digambar sebagai bitmap blok kecil yang
-  menyerupai bentuk asli spade/heart/diamond/club, proporsinya disesuaikan dengan
-  rasio kartu remi sungguhan (2.5:3.5).
-- **Kartu lawan tertutup** selama tangan berjalan (dan tetap tertutup selamanya kalau
-  fold, sesuai aturan mucking di poker sungguhan) — baru terbuka versi kecil saat
+- **Standard poker rules** — full Texas Hold'em No-Limit: blinds, preflop/flop/turn/
+  river, all-in, multi-way side-pots (calculated correctly), showdown.
+- **7 distinct AI bot personalities** (see table below), chosen at random each session
+  — not just randomized bots, each one has its own tightness (VPIP), aggression,
+  bluff tendency, and fold-to-raise profile.
+- **Adaptive AI**: preflop uses the Chen Formula, postflop uses Monte Carlo simulation
+  (equity estimation) to evaluate hand strength relative to the number of opponents.
+- **Correct 7-card hand evaluator** (finds the best 5-card combination out of 7,
+  including the A-2-3-4-5 wheel straight case).
+- **ASCII/pixel-art cards** — each card is drawn as a small bitmap that resembles the
+  real shape of a spade/heart/diamond/club, proportioned to match a real playing
+  card's ratio (2.5:3.5).
+- **Hidden opponent cards** while the hand is in progress (and permanently hidden if
+  folded, following real poker mucking rules) — revealed as a smaller card at
   showdown.
-- **Modal sama rata**: kamu dan semua bot mulai dengan $50,000, blind naik otomatis
-  tiap 5 tangan.
-- **Dua bahasa** — Bahasa Indonesia & English, dipilih saat game dimulai. Semua
-  teks penjelasan/prompt/pesan ikut berubah; istilah aksi inti (Check/Call/Raise/
-  Fold/All-in) tetap bahasa Inggris di kedua pilihan karena itu istilah universal.
-- **Zero dependency** — cuma pakai Python standard library (`random`, `os`, `re`,
-  `time`, `itertools`, `collections`). Tidak perlu `pip install` apa pun.
+- **Even starting stacks**: you and every bot start with $50,000, blinds increase
+  automatically every 5 hands.
+- **Two languages** — Indonesian & English, chosen when the game starts. All
+  narration/prompt/message text switches accordingly; the core action terms
+  (Check/Call/Raise/Fold/All-in) stay in English in both languages since those are
+  universal poker terms.
+- **Zero dependencies** — only uses the Python standard library (`random`, `os`, `re`,
+  `time`, `itertools`, `collections`). No `pip install` required.
 
-## Kepribadian Bot
+## Bot Personalities
 
-| Bot | Gaya bermain |
+| Bot | Playstyle |
 |---|---|
-| **The Rock** | Sangat selektif, jarang bermain kecuali tangan kuat. Nyaris tidak pernah bluff. |
-| **The Maniac** | Longgar dan agresif — bertaruh besar dan sering bluff. Bahaya kalau dianggap enteng. |
-| **The Shark** | Seimbang dan kalkulatif, mendekati gaya bermain optimal. |
-| **The Calling Station** | Suka memanggil (call) hampir apa saja, jarang fold atau raise. |
-| **The Bluffer** | Sering menggertak tanpa memandang kekuatan tangan sebenarnya. |
-| **The Mathematician** | Bermain sangat dekat dengan pot odds & ekuitas murni, minim emosi. |
-| **The Wildcard** | Tidak dapat diprediksi — gayanya berubah-ubah dari tangan ke tangan. |
+| **The Rock** | Extremely selective, rarely plays unless the hand is strong. Almost never bluffs. |
+| **The Maniac** | Loose and aggressive — bets big and bluffs often. Dangerous if underestimated. |
+| **The Shark** | Balanced and calculating, close to optimal play. |
+| **The Calling Station** | Loves to call almost anything, rarely folds or raises. |
+| **The Bluffer** | Bluffs frequently regardless of actual hand strength. |
+| **The Mathematician** | Plays very close to pure pot odds & equity, minimal emotion. |
+| **The Wildcard** | Unpredictable — playstyle shifts from hand to hand. |
 
-## Cara Menjalankan
+## How to Run
 
-Butuh Python 3.8+ dan terminal yang mendukung UTF-8 + warna ANSI (Terminal.app,
-iTerm2, Windows Terminal, GNOME Terminal, dll — Command Prompt lawas mungkin perlu
-`chcp 65001` dulu utk UTF-8).
+Requires Python 3.8+ and a terminal that supports UTF-8 + ANSI colors (Terminal.app,
+iTerm2, Windows Terminal, GNOME Terminal, etc — older Command Prompt may need
+`chcp 65001` first for UTF-8).
 
 ```bash
-git clone https://github.com/<username>/<nama-repo>.git
-cd <nama-repo>
+git clone https://github.com/<username>/<repo-name>.git
+cd <repo-name>
 python3 poker_game.py
 ```
 
-Tidak ada langkah instalasi lain — satu file, langsung jalan. Begitu dijalankan, kamu
-akan diminta memilih bahasa (Indonesia/English) dulu sebelum masuk ke intro.
+No other installation steps — it's a single file, ready to run. Once launched, you'll
+first be asked to choose a language (Indonesian/English) before the intro appears.
 
-## Kontrol
+## Controls
 
-| Tombol | Aksi |
+| Key | Action |
 |---|---|
 | `K` | Check |
 | `C` | Call |
-| `R` | Raise (akan diminta memasukkan jumlahnya) |
+| `R` | Raise (you'll be prompted for the amount) |
 | `A` | All-in |
 | `F` | Fold |
-| `Q` | Keluar dari game |
+| `Q` | Quit the game |
 
-## Struktur Kode
+## Code Structure
 
-Semuanya ada di satu file `poker_game.py` (~1000 baris), dibagi jadi beberapa bagian:
+Everything lives in a single file, `poker_game.py` (~1000 lines), split into several
+sections:
 
-- **Kartu & Deck** — `Card`, `build_deck()`.
-- **ASCII Art Kartu** — `card_art_lines()`, `SUIT_BITMAP`, kartu mini (`mini_card_lines()`).
-- **Evaluator Tangan** — `evaluate_5()`, `evaluate_best()`, `hand_name()`.
-- **AI Bot** — `chen_score()`, `estimate_equity()`, `bot_decide()`, `PERSONALITIES`.
-- **`PokerGame`** — mesin permainan: rendering meja, ronde taruhan, side-pot
-  (`compute_pots()`), showdown, dan loop turnamen.
+- **Cards & Deck** — `Card`, `build_deck()`.
+- **Card ASCII Art** — `card_art_lines()`, `SUIT_BITMAP`, mini cards (`mini_card_lines()`).
+- **Hand Evaluator** — `evaluate_5()`, `evaluate_best()`, `hand_name()`.
+- **Bot AI** — `chen_score()`, `estimate_equity()`, `bot_decide()`, `PERSONALITIES`.
+- **`PokerGame`** — the game engine: table rendering, betting rounds, side-pots
+  (`compute_pots()`), showdown, and the tournament loop.
 
-## Kontribusi
+## Contributing
 
-Pull request & issue dipersilakan — beberapa ide pengembangan lanjutan:
+Pull requests & issues are welcome — a few ideas for future development:
 
-- Simpan/lanjutkan sesi (save & resume).
-- Statistik/riwayat tangan.
-- Opsi variasi permainan lain (Omaha, Short Deck, dll).
-- Dukungan multiplayer via socket/terminal bersama.
+- Save/resume a session.
+- Hand history / statistics.
+- Other game variants (Omaha, Short Deck, etc).
+- Multiplayer support over sockets/shared terminal.
 
-## Lisensi
+## License
 
-[MIT License](LICENSE) — bebas dipakai, dicopy, dimodifikasi, bahkan dipakai untuk
-proyek komersial oleh siapa saja, selama tetap mencantumkan notice hak cipta aslinya
-(sudah ada di file `LICENSE`). Kamu tetap pemegang hak cipta atas kode ini.
+[MIT License](LICENSE) — free to use, copy, modify, and even use commercially by
+anyone, as long as the original copyright notice is kept (already included in the
+`LICENSE` file). You remain the copyright holder of this code.
