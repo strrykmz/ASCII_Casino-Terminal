@@ -4,13 +4,18 @@
 =======================================================================================
   ASCII CASINO  —  TEXAS HOLD'EM NO-LIMIT
   Sebuah game poker kasino yang berjalan 100% lokal di terminal.
+  A casino-style poker game that runs entirely in your terminal.
   Melawan 7 bot AI dengan kepribadian berbeda-beda. Modal awal: $50,000 masing-masing.
+  7 AI bot opponents, each with a different style. $50,000 starting stack each.
 
-  Cara main:
+  Cara main / How to run:
       python3 poker_game.py
 
-  Kontrol saat giliranmu:
-      [K] Check     [C] Call     [R] Raise     [A] All-in     [F] Fold     [Q] Keluar
+  Bahasa/UI dipilih saat game dimulai (Indonesia/English).
+  Language is chosen when the game starts (Indonesian/English).
+
+  Kontrol saat giliranmu / Controls on your turn:
+      [K] Check     [C] Call     [R] Raise     [A] All-in     [F] Fold     [Q] Quit
 =======================================================================================
 """
 
@@ -21,6 +26,88 @@ import sys
 import time
 import itertools
 from collections import deque, Counter
+
+# ---------------------------------------------------------------------------------
+# BAHASA / LANGUAGE (i18n)
+# ---------------------------------------------------------------------------------
+# LANG dipilih lewat choose_language() di awal main() sebelum apa pun ditampilkan.
+# Semua teks yg terlihat pemain (bkn komentar kode) diambil lewat t(key, **kwargs).
+# Istilah aksi poker inti (Check/Call/Raise/Fold/All-in/Small Blind/Big Blind) sengaja
+# dibiarkan bahasa Inggris di kedua bahasa — istilah ini universal & dipakai apa
+# adanya oleh pemain poker Indonesia juga.
+LANG = 'en'
+
+STRINGS = {
+    'id': {
+        'subtitle': "7 lawan bot AI dengan gaya berbeda-beda. Modal $50,000. Winner takes all.",
+        'controls_label': "Kontrol:",
+        'ctrl_check': "check", 'ctrl_call': "call", 'ctrl_raise': "raise",
+        'ctrl_allin': "all-in", 'ctrl_fold': "fold", 'ctrl_quit': "keluar",
+        'meet_opponents': "Kenali lawanmu:",
+        'name_prompt': "Masukkan nama kamu: ",
+        'default_name': "Pemain",
+        'you_label': "Kamu",
+        'you_tag': " (Kamu)",
+        'opponents_label': "Lawan-lawan:",
+        'remaining_label': "Pemain tersisa:",
+        'pause_prompt': "\n  (Tekan Enter untuk lanjut...)",
+        'current_hand': "Tangan kamu saat ini:",
+        'action_prompt': "{name}, aksi kamu: ",
+        'opt_quit': "[Q] Keluar",
+        'msg_free_check': "  Kamu bisa check gratis — tidak perlu fold. Pilih lagi.",
+        'msg_not_enough_chips': "  Chip kamu tidak cukup untuk raise, coba All-in.",
+        'prompt_raise_amount': "  Raise sebesar berapa (minimal {min})? $",
+        'msg_invalid_input': "  Input tidak valid.",
+        'msg_raise_positive': "  Jumlah raise harus positif.",
+        'msg_min_raise': "  Raise minimal {min} (atau All-in).",
+        'msg_unrecognized': "  Input tidak dikenali, coba lagi.",
+        'note_all_in_runout': "Semua All-in — membuka sisa kartu papan...",
+        'msg_win_by_fold': "{winner} menang {amount} (semua lawan fold)",
+        'game_over_note': "{name} kehabisan chip. Game over.",
+        'standings_header': "\n=== KLASEMEN AKHIR ===",
+        'eliminated_tag': "TERSINGKIR",
+        'thanks_playing': "\nTerima kasih sudah bermain!",
+        'game_stopped': "\n\nGame dihentikan. Sampai jumpa!",
+    },
+    'en': {
+        'subtitle': "7 AI bot opponents, each with a different style. $50,000 starting stack. Winner takes all.",
+        'controls_label': "Controls:",
+        'ctrl_check': "check", 'ctrl_call': "call", 'ctrl_raise': "raise",
+        'ctrl_allin': "all-in", 'ctrl_fold': "fold", 'ctrl_quit': "quit",
+        'meet_opponents': "Meet your opponents:",
+        'name_prompt': "Enter your name: ",
+        'default_name': "Player",
+        'you_label': "You",
+        'you_tag': " (You)",
+        'opponents_label': "Opponents:",
+        'remaining_label': "Players remaining:",
+        'pause_prompt': "\n  (Press Enter to continue...)",
+        'current_hand': "Your current hand:",
+        'action_prompt': "{name}, your action: ",
+        'opt_quit': "[Q] Quit",
+        'msg_free_check': "  You can check for free — no need to fold. Choose again.",
+        'msg_not_enough_chips': "  Not enough chips to raise — try All-in instead.",
+        'prompt_raise_amount': "  Raise by how much (minimum {min})? $",
+        'msg_invalid_input': "  Invalid input.",
+        'msg_raise_positive': "  Raise amount must be positive.",
+        'msg_min_raise': "  Minimum raise is {min} (or go All-in).",
+        'msg_unrecognized': "  Input not recognized, try again.",
+        'note_all_in_runout': "Everyone's All-in — revealing the rest of the board...",
+        'msg_win_by_fold': "{winner} wins {amount} (all opponents folded)",
+        'game_over_note': "{name} is out of chips. Game over.",
+        'standings_header': "\n=== FINAL STANDINGS ===",
+        'eliminated_tag': "ELIMINATED",
+        'thanks_playing': "\nThanks for playing!",
+        'game_stopped': "\n\nGame stopped. See you next time!",
+    },
+}
+
+
+def t(key, **kwargs):
+    """Ambil teks terjemahan sesuai LANG saat ini; format dgn kwargs kalau ada."""
+    text = STRINGS[LANG][key]
+    return text.format(**kwargs) if kwargs else text
+
 
 # ---------------------------------------------------------------------------------
 # WARNA TERMINAL (ANSI)
@@ -98,7 +185,14 @@ def color_for(card):
 # bitmap (bentuk siluet asli spade/heart/diamond/club, digambar blok demi blok) yang
 # sama persis di semua rank — pembeda rank cuma indeks kecil di pojok kiri-atas &
 # kanan-bawah (spt kartu asli). Lebih sederhana & konsisten drpd pola pip per-rank.
-CARD_INTERIOR_W = 9
+#
+# Catatan proporsi: karakter terminal itu sendiri jauh lebih TINGGI drpd LEBAR (kira2
+# rasio lebar:tinggi 1:2), jadi grid karakter yg dibuat *persegi* akan tampak memanjang
+# ke atas di layar. Supaya kartu terlihat sedekat mungkin dgn rasio kartu remi asli
+# (2.5:3.5 ≈ 0.71 lebar:tinggi), kartu ini dibuat LEBIH LEBAR drpd tinggi dlm hitungan
+# kolom/baris karakter — setelah dikompensasi bentuk karakter yg tinggi, hasilnya baru
+# terlihat proporsional 1:1 dgn bentuk kartu sungguhan.
+CARD_INTERIOR_W = 13
 CARD_BODY_ROWS = 7
 
 # Bitmap 7x7 per jenis kartu ('#' = pixel terisi, '.' = kosong) — siluet sederhana tapi
@@ -157,18 +251,23 @@ def _suit_icon_rows(suit, col):
     return rows
 
 
+def _back_pattern_row(width, offset):
+    """Satu baris pola punggung kartu (checker belah ketupat), dibangun dinamis sesuai
+    `width` supaya selalu pas berapa pun CARD_INTERIOR_W-nya."""
+    cycle = "◆░◇░"
+    return "".join(cycle[(i + offset) % len(cycle)] for i in range(width))
+
+
 def card_art_lines(card=None, hidden=False):
-    """Kembalikan baris-baris ASCII art kartu bergaya klasik/pixel (lebar 11, tinggi 11)."""
+    """Kembalikan baris-baris ASCII art kartu bergaya klasik/pixel."""
     top = "╔" + "═" * CARD_INTERIOR_W + "╗"
     bot = "╚" + "═" * CARD_INTERIOR_W + "╝"
 
     if hidden:
         col = C.BLUE
-        pat_a = "◆░◇░◆░◇░◆"
-        pat_b = "░◇░◆░◇░◆░"
         rows = [top]
         for i in range(CARD_BODY_ROWS + 2):
-            rows.append("║" + (pat_a if i % 2 == 0 else pat_b) + "║")
+            rows.append("║" + _back_pattern_row(CARD_INTERIOR_W, 0 if i % 2 == 0 else 2) + "║")
         rows.append(bot)
         return [col + r + C.RESET for r in rows]
 
@@ -427,13 +526,24 @@ PERSONALITIES = {
 }
 
 PERSONALITY_DESC = {
-    "rock":     "Sangat selektif, jarang bermain kecuali tangan kuat. Nyaris tidak pernah bluff.",
-    "maniac":   "Longgar dan agresif — bertaruh besar dan sering bluff. Bahaya kalau dianggap enteng.",
-    "shark":    "Seimbang dan kalkulatif, mendekati gaya bermain optimal (GTO-ish).",
-    "station":  "Suka memanggil (call) hampir apa saja, jarang melipat (fold) atau menaikkan (raise).",
-    "bluffer":  "Sering menggertak tanpa memandang kekuatan tangan sebenarnya.",
-    "mathlete": "Bermain sangat dekat dengan pot odds & ekuitas murni, minim emosi.",
-    "wildcard": "Tidak dapat diprediksi — gayanya berubah-ubah dari tangan ke tangan.",
+    'id': {
+        "rock":     "Sangat selektif, jarang bermain kecuali tangan kuat. Nyaris tidak pernah bluff.",
+        "maniac":   "Longgar dan agresif — bertaruh besar dan sering bluff. Bahaya kalau dianggap enteng.",
+        "shark":    "Seimbang dan kalkulatif, mendekati gaya bermain optimal (GTO-ish).",
+        "station":  "Suka memanggil (call) hampir apa saja, jarang melipat (fold) atau menaikkan (raise).",
+        "bluffer":  "Sering menggertak tanpa memandang kekuatan tangan sebenarnya.",
+        "mathlete": "Bermain sangat dekat dengan pot odds & ekuitas murni, minim emosi.",
+        "wildcard": "Tidak dapat diprediksi — gayanya berubah-ubah dari tangan ke tangan.",
+    },
+    'en': {
+        "rock":     "Extremely selective — rarely plays unless holding a strong hand. Almost never bluffs.",
+        "maniac":   "Loose and aggressive — bets big and bluffs often. Dangerous if underestimated.",
+        "shark":    "Balanced and calculating, close to an optimal (GTO-ish) playing style.",
+        "station":  "Loves calling almost anything, rarely folds or raises.",
+        "bluffer":  "Bluffs often, regardless of actual hand strength.",
+        "mathlete": "Plays very close to pot odds and pure equity, with little emotion.",
+        "wildcard": "Unpredictable — style shifts from hand to hand.",
+    },
 }
 
 EQUITY_TRIALS = 60
@@ -669,7 +779,7 @@ class PokerGame:
         Jumlah kolom dihitung otomatis supaya lawan selalu jejer maks GRID_ROWS_TARGET
         baris ke kanan (melebar), bukan menumpuk ke bawah jadi terlalu tinggi."""
         bots = [p for p in self.players if p is not self.human and not p.eliminated]
-        lines = [f"{C.BOLD}Lawan-lawan:{C.RESET}", ""]
+        lines = [f"{C.BOLD}{t('opponents_label')}{C.RESET}", ""]
         if not bots:
             return lines
         cols = -(-len(bots) // GRID_ROWS_TARGET)  # ceil(len(bots) / GRID_ROWS_TARGET)
@@ -697,7 +807,7 @@ class PokerGame:
         print(f"  {chip_icon} Blinds: {C.BOLD}{fmt(self.small_blind)}/{fmt(self.big_blind)}{C.RESET}   "
               f"│  Street: {C.BOLD}{street.upper()}{C.RESET}   "
               f"│  Pot: {C.GREEN_BOLD}{fmt(self.pot_total())}{C.RESET}   "
-              f"│  Pemain tersisa: {C.BOLD}{remaining}{C.RESET}")
+              f"│  {t('remaining_label')} {C.BOLD}{remaining}{C.RESET}")
         print()
         print(f"  {C.BOLD}{C.YELLOW}♣ Community Cards ♦{C.RESET}")
         board_cards = self.board + [None] * (5 - len(self.board))
@@ -706,7 +816,7 @@ class PokerGame:
         print(C.GOLD + "─" * (W + 2) + C.RESET)
 
         # --- kolom kiri: kamu ---
-        left_lines = [f"{C.BOLD}{C.YELLOW}★ Kamu{C.RESET}"]
+        left_lines = [f"{C.BOLD}{C.YELLOW}★ {t('you_label')}{C.RESET}"]
         p = self.human
         if not p.eliminated:
             you_status = ""
@@ -737,7 +847,7 @@ class PokerGame:
 
     def pause_for_human(self):
         try:
-            input(C.DIM + "\n  (Tekan Enter untuk lanjut...)" + C.RESET)
+            input(C.DIM + t('pause_prompt') + C.RESET)
         except EOFError:
             pass
 
@@ -750,7 +860,7 @@ class PokerGame:
     def human_action(self, player, to_call, min_raise, pot_now, current_bet):
         if self.board:
             score, _ = evaluate_best(player.hole + self.board)
-            print(C.CYAN + f"  Tangan kamu saat ini: {hand_name(score)}" + C.RESET)
+            print(C.CYAN + f"  {t('current_hand')} {hand_name(score)}" + C.RESET)
         while True:
             opts = []
             if to_call == 0:
@@ -763,13 +873,13 @@ class PokerGame:
                 opts.append("[A] All-in")
             if to_call > 0:
                 opts.append("[F] Fold")
-            opts.append("[Q] Keluar")
+            opts.append(t('opt_quit'))
             print(C.YELLOW + "  " + "   ".join(opts) + C.RESET)
             try:
-                raw = input(f"{C.BOLD}{player.name}{C.RESET}, aksi kamu: ").strip().lower()
+                raw = input(t('action_prompt', name=f"{C.BOLD}{player.name}{C.RESET}")).strip().lower()
             except EOFError:
                 raise QuitGame()
-            if raw in ('q', 'quit', 'exit'):
+            if raw in ('q', 'quit', 'exit', 'keluar'):
                 raise QuitGame()
             if raw in ('k', 'check') and to_call == 0:
                 return ('check', 0)
@@ -777,30 +887,30 @@ class PokerGame:
                 return ('check', 0) if to_call == 0 else ('call', to_call)
             if raw in ('f', 'fold'):
                 if to_call == 0:
-                    print("  Kamu bisa check gratis — tidak perlu fold. Pilih lagi.")
+                    print(t('msg_free_check'))
                     continue
                 return ('fold', 0)
             if raw in ('a', 'all-in', 'allin'):
                 return ('raise', player.chips)
             if raw in ('r', 'raise'):
                 if player.chips <= to_call:
-                    print("  Chip kamu tidak cukup untuk raise, coba All-in.")
+                    print(t('msg_not_enough_chips'))
                     continue
                 try:
-                    amt_str = input(f"  Raise sebesar berapa (minimal {fmt(min_raise)})? $").strip()
+                    amt_str = input(t('prompt_raise_amount', min=fmt(min_raise))).strip()
                     amt = int(amt_str.replace(',', ''))
                 except (ValueError, EOFError):
-                    print("  Input tidak valid.")
+                    print(t('msg_invalid_input'))
                     continue
                 max_possible = player.chips - to_call
                 if amt <= 0:
-                    print("  Jumlah raise harus positif.")
+                    print(t('msg_raise_positive'))
                     continue
                 if amt < min_raise and amt < max_possible:
-                    print(f"  Raise minimal {fmt(min_raise)} (atau All-in).")
+                    print(t('msg_min_raise', min=fmt(min_raise)))
                     continue
                 return ('raise', min(amt, max_possible))
-            print("  Input tidak dikenali, coba lagi.")
+            print(t('msg_unrecognized'))
 
     def get_action(self, player, to_call, min_raise, pot_now, current_bet, seat_order):
         if player.is_bot:
@@ -928,7 +1038,7 @@ class PokerGame:
                 self.render_table(street, reveal=False)
                 self.run_betting_street(street, seat_order, button_idx, bb_idx)
             else:
-                self.render_table(street, reveal=False, note="Semua All-in — membuka sisa kartu papan...")
+                self.render_table(street, reveal=False, note=t('note_all_in_runout'))
                 time.sleep(0.6)
 
         while self.count_not_folded(seat_order) > 1 and len(self.board) < 5:
@@ -952,7 +1062,7 @@ class PokerGame:
             winner.chips += amount
             for p in seat_order:
                 p.total_bet_hand = 0
-            result_lines.append(f"{winner.name} menang {fmt(amount)} (semua lawan fold)")
+            result_lines.append(t('msg_win_by_fold', winner=winner.name, amount=fmt(amount)))
             self.render_table('showdown', reveal=False, winners=result_lines)
             self.pause_for_human()
             return
@@ -999,10 +1109,10 @@ class PokerGame:
     # ---------- loop turnamen ----------
     def print_standings(self):
         ranked = sorted(self.players, key=lambda p: -p.chips)
-        print(C.GOLD + "\n=== KLASEMEN AKHIR ===" + C.RESET)
+        print(C.GOLD + t('standings_header') + C.RESET)
         for i, p in enumerate(ranked, 1):
-            tag = " (Kamu)" if p is self.human else ""
-            status = "TERSINGKIR" if p.eliminated else fmt(p.chips)
+            tag = t('you_tag') if p is self.human else ""
+            status = t('eliminated_tag') if p.eliminated else fmt(p.chips)
             print(f"  {i}. {p.name}{tag}: {status}")
 
     def run(self):
@@ -1016,13 +1126,13 @@ class PokerGame:
                     break
                 if self.human.eliminated:
                     self.render_table('game over', reveal=False,
-                                       note=f"{self.human.name} kehabisan chip. Game over.")
+                                       note=t('game_over_note', name=self.human.name))
                     break
                 if self.hand_number % 5 == 0:
                     self.small_blind = int(self.small_blind * 1.5)
                     self.big_blind = int(self.big_blind * 1.5)
         except QuitGame:
-            print(C.YELLOW + "\nTerima kasih sudah bermain!" + C.RESET)
+            print(C.YELLOW + t('thanks_playing') + C.RESET)
         self.print_standings()
 
 
@@ -1041,25 +1151,47 @@ def print_intro():
     """)
     print(C.RESET)
     print(C.BOLD + "        ASCII CASINO — TEXAS HOLD'EM NO-LIMIT" + C.RESET)
-    print(C.DIM + "        7 lawan bot AI dengan gaya berbeda-beda. Modal $50,000. Winner takes all.\n" + C.RESET)
-    print("  Kontrol: " + C.YELLOW + "[K]" + C.RESET + "check  " +
-          C.YELLOW + "[C]" + C.RESET + "call  " + C.YELLOW + "[R]" + C.RESET + "raise  " +
-          C.YELLOW + "[A]" + C.RESET + "all-in  " + C.YELLOW + "[F]" + C.RESET + "fold  " +
-          C.YELLOW + "[Q]" + C.RESET + "keluar\n")
-    print(C.CYAN + "  Kenali lawanmu:" + C.RESET)
+    print(C.DIM + "        " + t('subtitle') + "\n" + C.RESET)
+    print("  " + t('controls_label') + " " +
+          C.YELLOW + "[K]" + C.RESET + t('ctrl_check') + "  " +
+          C.YELLOW + "[C]" + C.RESET + t('ctrl_call') + "  " +
+          C.YELLOW + "[R]" + C.RESET + t('ctrl_raise') + "  " +
+          C.YELLOW + "[A]" + C.RESET + t('ctrl_allin') + "  " +
+          C.YELLOW + "[F]" + C.RESET + t('ctrl_fold') + "  " +
+          C.YELLOW + "[Q]" + C.RESET + t('ctrl_quit') + "\n")
+    print(C.CYAN + "  " + t('meet_opponents') + C.RESET)
     for key, p in PERSONALITIES.items():
-        print(f"   - {C.BOLD}{p['label']:<20}{C.RESET} {PERSONALITY_DESC[key]}")
+        print(f"   - {C.BOLD}{p['label']:<20}{C.RESET} {PERSONALITY_DESC[LANG][key]}")
     print()
 
 
+def choose_language():
+    """Tanyakan bahasa tampilan sebelum apa pun lain ditampilkan — istilah aksi inti
+    (Check/Call/Raise/Fold/All-in) tetap bahasa Inggris di kedua pilihan, jadi kontrol
+    dasar game tetap sama; yang berubah cuma teks penjelasan/prompt/pesannya."""
+    global LANG
+    print(C.GOLD + C.BOLD + "\n  Pilih bahasa / Choose language:" + C.RESET)
+    print("   [1] Bahasa Indonesia")
+    print("   [2] English (default)")
+    try:
+        raw = input("  > ").strip().lower()
+    except EOFError:
+        raw = ""
+    if raw in ('1', 'id', 'indo', 'indonesia', 'bahasa indonesia', 'bahasa'):
+        LANG = 'id'
+    else:
+        LANG = 'en'
+
+
 def main():
+    choose_language()
     print_intro()
     try:
-        name = input("Masukkan nama kamu: ").strip()
+        name = input(t('name_prompt')).strip()
     except EOFError:
         name = ""
     if not name:
-        name = "Player"
+        name = t('default_name')
     game = PokerGame(name, num_bots=7, starting_chips=50000, small_blind=100, big_blind=200)
     game.run()
 
@@ -1068,5 +1200,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\nGame dihentikan. Sampai jumpa!")
+        print(t('game_stopped'))
         sys.exit(0)
